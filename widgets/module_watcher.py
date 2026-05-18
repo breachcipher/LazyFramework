@@ -37,7 +37,7 @@ class ModuleWatcher(QObject):
                 possible_paths = [
                     Path.cwd() / "modules",
                     base_path / "modules",
-                    Path.home() / "LazyFramework" / "modules",
+                    Path.home() / "lazyframework" / "modules",
                     Path(__file__).resolve().parent.parent.parent / "modules"
                 ]
                 for p in possible_paths:
