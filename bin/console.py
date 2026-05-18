@@ -412,21 +412,35 @@ class LazyFramework:
     def scan_modules(self):
         self.modules.clear()
         self.metadata.clear()
-        self.auto_run_modules()
+        from pathlib import Path
+        project_root = Path(__file__).resolve().parent.parent
+        MODULE_DIR = project_root / "modules"
         valid_extensions = [".py", ".cpp", ".c", ".rb", ".php"]
-        for folder, prefix in ((MODULE_DIR, "modules"),):
-            for p in folder.rglob("*"):
-                if p.is_dir(): continue
-                if p.suffix not in valid_extensions: continue
-                if p.name == "__init__.py": continue
-                if "__pycache__" in p.parts or p.suffix in ['.pyc', '.pyo']: continue
-                rel = str(p.relative_to(folder)).replace(os.sep, "/")
-                key = f"{prefix}/{rel[:-len(p.suffix)]}" if p.suffix else f"{prefix}/{rel}"
-                if key.endswith('.py'): key = key[:-3]
-                self.modules[key] = p
-                self.metadata[key] = self._read_meta(p)
-        self.auto_run_modules()
-     
+        if not MODULE_DIR.exists():
+             console.print(f"[red]Modules directory not found: {MODULE_DIR}[/red]")
+             return
+        for p in MODULE_DIR.rglob("*"):
+            if p.is_dir(): 
+                continue
+            if p.suffix not in valid_extensions: 
+                continue
+            if p.name == "__init__.py": 
+                continue
+            if "__pycache__" in p.parts or p.suffix in ['.pyc', '.pyo']: 
+                continue
+            rel = str(p.relative_to(MODULE_DIR)).replace(os.sep, "/")
+            key = f"modules/{rel}"
+            if key.endswith('.py'):
+                key = key[:-3]
+            self.modules[key] = p
+            self.metadata[key] = self._read_meta(p)
+        if self.modules:
+            console.print(f"[bold green][*][/bold green] Scanning module tree... {len(self.modules)} module(s)")
+
+        else:
+            console.print(f"[red]No modules found in {MODULE_DIR}[/red]")
+
+
     def auto_run_modules(self):
         if not self.modules:
             console.print("No modules found.")

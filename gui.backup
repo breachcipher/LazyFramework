@@ -15,13 +15,12 @@ import threading
 import random
 
 from contextlib import redirect_stdout, redirect_stderr
-from pathlib import Path
 
 
 #from tkinter.font import Font
 from PyQt6.QtWidgets import *
 #from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QTimer, QUrl, QEvent
-from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QTimer, QUrl, QEvent,QPropertyAnimation, QEasingCurve,QPoint, QFileSystemWatcher
+from PyQt6.QtCore import Qt, pyqtSignal, QObject, QThread, QTimer, QUrl, QEvent,QPropertyAnimation, QEasingCurve,QPoint
 from PyQt6.QtCore import QMetaObject
 from PyQt6.QtGui import QFont,QTextCursor, QPalette, QColor, QAction, QKeySequence, QIntValidator, QLinearGradient, QPainter, QPen
 from PyQt6.QtCore import QSize
@@ -59,9 +58,6 @@ from widgets.proxy_dialog import ProxySettingsDialog
 # Import dari folder core/
 from core.capture import UniversalCapture
 from core.module_runner import ModuleRunner
-# Get absolute project root directory
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
 
 
 class GUIConsole:
@@ -150,7 +146,6 @@ class LazyFrameworkGUI(QMainWindow):
                 pass
                 
         #self.load_banner()
-        QTimer.singleShot(500, self.start_module_watcher)  # Auto-scan watcher
         QTimer.singleShot(2000, self.start_tor_auto_rotate)
         self.last_tor_ip = None
         self.active_module = ""
@@ -323,16 +318,12 @@ class LazyFrameworkGUI(QMainWindow):
             # Module Info (sidebar) - HANYA FONT
             self.module_info.setFont(QFont(available_font, 9))
             
-            # Module Tree - set font ke semua node
-            if hasattr(self, 'module_tree'):
-                tree_font = QFont(available_font, 10)
-                def _set_tree_font(node):
-                    node.setFont(0, tree_font)
-                    for j in range(node.childCount()):
-                        _set_tree_font(node.child(j))
-                root_node = self.module_tree.invisibleRootItem()
-                for i in range(root_node.childCount()):
-                    _set_tree_font(root_node.child(i))
+            # Module List - HANYA FONT
+            module_list_font = QFont(available_font, 10)
+            for i in range(self.module_list.count()):
+                item = self.module_list.item(i)
+                if item:
+                    item.setFont(module_list_font)
             
             # Option Widgets - HANYA FONT
             if hasattr(self, 'option_widgets'):
@@ -993,13 +984,11 @@ class LazyFrameworkGUI(QMainWindow):
         sidebar = QWidget()
         sidebar.setMaximumWidth(400)
         layout = QVBoxLayout(sidebar)
-        layout.setSpacing(4)
-        layout.setContentsMargins(4, 4, 4, 4)
 
         # Search box
         search_layout = QHBoxLayout()
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("🔍  Search modules...")
+        self.search_input.setPlaceholderText("Search modules...")
         self.search_input.textChanged.connect(self.search_modules)
         search_layout.addWidget(self.search_input)
 
@@ -1009,87 +998,28 @@ class LazyFrameworkGUI(QMainWindow):
         search_layout.addWidget(search_btn)
         layout.addLayout(search_layout)
 
-        # Category buttons dengan warna per kategori
+        # Category buttons
         categories_layout = QHBoxLayout()
-        categories_layout.setSpacing(3)
         categories = [
-            ("All",      "all",      "#8be9fd"),
-            ("Recon",    "recon",    "#50fa7b"),
-            ("Strike",   "strike",   "#ff5555"),
-            ("Hold",     "hold",     "#f1fa8c"),
-            ("Ops",      "ops",      "#ffb86c"),
-            ("Payloads", "payloads", "#bd93f9"),
+            ("All", "all"), ("Recon", "recon"), ("Strike", "strike"),
+            ("Hold", "hold"), ("Ops", "ops"), ("Payloads", "payloads")
         ]
 
-        for name, cat_type, color in categories:
+        for name, cat_type in categories:
             btn = QPushButton(name)
             btn.setProperty('category', cat_type)
-            btn.setFixedHeight(24)
-            btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: #252525;
-                    color: {color};
-                    border: 1px solid {color};
-                    border-radius: 3px;
-                    font-size: 10px;
-                    font-weight: bold;
-                    padding: 0 4px;
-                }}
-                QPushButton:hover {{
-                    background: {color};
-                    color: #1e1e1e;
-                }}
-                QPushButton:pressed {{
-                    background: {color};
-                    color: #000000;
-                }}
-            """)
             btn.clicked.connect(self.on_category_click)
             categories_layout.addWidget(btn)
 
         layout.addLayout(categories_layout)
 
-        # === SPLITTER ===
+        # === PERBAIKAN: SPLITTER ===
         splitter = QSplitter(Qt.Orientation.Vertical)
-
-        # === QTreeWidget sebagai module explorer (mengganti QListWidget) ===
-        self.module_tree = QTreeWidget()
-        self.module_tree.setHeaderHidden(True)
-        self.module_tree.setColumnCount(1)
-        self.module_tree.setIndentation(16)
-        self.module_tree.setAnimated(True)
-        self.module_tree.setRootIsDecorated(True)
-        self.module_tree.setUniformRowHeights(False)
-        self.module_tree.setStyleSheet("""
-            QTreeWidget {
-                background-color: #1a1a1a;
-                color: #d4d4d4;
-                border: 1px solid #333;
-                font-family: "DejaVu Sans Mono", "Courier New", monospace;
-                font-size: 10px;
-                outline: none;
-                selection-background-color: transparent;
-            }
-            QTreeWidget::item {
-                padding: 2px 4px;
-                border-radius: 2px;
-            }
-            QTreeWidget::item:hover {
-                background: #2a2a3a;
-            }
-            QTreeWidget::item:selected {
-                background: #2d4a6a;
-                color: #ffffff;
-            }
-            QTreeWidget::branch {
-                background: #1a1a1a;
-            }
-        """)
-        self.module_tree.itemDoubleClicked.connect(self.load_selected_module)
-        splitter.addWidget(self.module_tree)
-
-        # Alias agar kode lain yang masih pakai self.module_list tidak crash
-        self.module_list = self.module_tree
+        
+        # Module list
+        self.module_list = QListWidget()
+        self.module_list.itemDoubleClicked.connect(self.load_selected_module)
+        splitter.addWidget(self.module_list)
 
         # Tab widget untuk info dan browser
         self.info_browser_tabs = QTabWidget()
@@ -3297,186 +3227,68 @@ class LazyFrameworkGUI(QMainWindow):
             #self.append_output(f"Banner error: {e}")
 
 
-    # ── Metadata kategori untuk QTreeWidget ──────────────────────────────────────
-    _CAT_META = {
-        "recon":    {"color": "#50fa7b", "icon": "📡", "label": "Recon"},
-        "strike":   {"color": "#ff5555", "icon": "⚡", "label": "Strike"},
-        "hold":     {"color": "#f1fa8c", "icon": "🔒", "label": "Hold"},
-        "ops":      {"color": "#ffb86c", "icon": "🛠️",  "label": "Ops"},
-        "payloads": {"color": "#bd93f9", "icon": "💣", "label": "Payloads"},
-        "other":    {"color": "#8be9fd", "icon": "📦", "label": "Other"},
-    }
-
-    def _detect_category(self, module_path: str) -> str:
-        """Deteksi kategori dari path modul."""
-        p = module_path.lower()
-        if "/recon/"   in p: return "recon"
-        if "/strike/"  in p: return "strike"
-        if "/hold/"    in p: return "hold"
-        if "/ops/"     in p: return "ops"
-        if "payload"   in p: return "payloads"
-        return "other"
-
-    def _make_folder_icon(self, color_hex: str) -> "QIcon":
-        """Buat QIcon folder berwarna."""
-        from PyQt6.QtGui import QPixmap, QPainter, QColor
-        px = QPixmap(18, 18)
-        px.fill(QColor(0, 0, 0, 0))
-        painter = QPainter(px)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        # Body folder
-        painter.setBrush(QColor(color_hex + "33"))
-        painter.setPen(QColor(color_hex))
-        painter.drawRoundedRect(1, 4, 16, 12, 2, 2)
-        # Tab atas folder
-        painter.drawRoundedRect(1, 2, 7, 5, 1, 1)
-        painter.end()
-        return QIcon(px)
-
-    def _make_module_icon(self, color_hex: str) -> "QIcon":
-        """Buat QIcon bullet kecil untuk leaf node."""
-        from PyQt6.QtGui import QPixmap, QPainter, QColor
-        px = QPixmap(12, 12)
-        px.fill(QColor(0, 0, 0, 0))
-        painter = QPainter(px)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setBrush(QColor(color_hex + "aa"))
-        painter.setPen(QColor(color_hex))
-        painter.drawEllipse(1, 1, 10, 10)
-        painter.end()
-        return QIcon(px)
-
     def load_all_modules(self):
-        """Load semua modul sebagai QTreeWidget berlapis folder per kategori."""
-        from collections import defaultdict
-        self.module_tree.clear()
+        """Load all modules into the list"""
+        self.module_list.clear()
         modules = self.framework.metadata
 
-        # Kelompokkan: kategori → sub-path → list modul
-        tree_data = defaultdict(lambda: defaultdict(list))
         for module_path, meta in sorted(modules.items()):
             if not meta.get("options"):
                 continue
-            cat = self._detect_category(module_path)
-            rel = module_path.replace("modules/", "")
-            parts = rel.split("/")
-            sub_key = "/".join(parts[1:-1]) if len(parts) > 2 else ""
-            tree_data[cat][sub_key].append((module_path, parts[-1], meta))
 
-        CAT_ORDER = ["recon", "strike", "hold", "ops", "payloads", "other"]
+            display_name = module_path.replace("modules/", "")
+            item = QListWidgetItem(display_name)
+            item.setData(Qt.ItemDataRole.UserRole, module_path)
+            font = QFont("Hack", 10)
+            item.setFont(font)
+            # Color code by type
+            if "/recon/" in module_path:
+                item.setForeground(QColor("#ffffff"))  # Cyan
+            elif "/strike/" in module_path:
+                item.setForeground(QColor("#ffffff"))  # Red
+            elif "/hold/" in module_path:
+                item.setForeground(QColor("#ffffff"))  # Yellow
+            elif "/ops/" in module_path:
+                item.setForeground(QColor("#ffffff"))  # Green
+            elif "/payload" in module_path:
+                item.setForeground(QColor("#ffffff"))  # Pink
 
-        for cat in CAT_ORDER:
-            if cat not in tree_data:
-                continue
-            cm   = self._CAT_META[cat]
-            color = cm["color"]
-            emoji = cm["icon"]
-            label = cm["label"]
-            mod_count = sum(len(v) for v in tree_data[cat].values())
-
-            # Root folder per kategori
-            folder_icon = self._make_folder_icon(color)
-            root_item   = QTreeWidgetItem(self.module_tree)
-            root_item.setText(0, f"  {emoji}  {label}  [{mod_count}]")
-            root_item.setIcon(0, folder_icon)
-            root_item.setData(0, Qt.ItemDataRole.UserRole, None)
-            root_item.setData(0, Qt.ItemDataRole.UserRole + 1, cat)
-            root_item.setForeground(0, QColor(color))
-            root_item.setFont(0, QFont("DejaVu Sans Mono", 10, QFont.Weight.Bold))
-            root_item.setExpanded(True)
-
-            for sub_key in sorted(tree_data[cat].keys()):
-                mods = tree_data[cat][sub_key]
-
-                if sub_key:
-                    # Sub-folder
-                    sub_item = QTreeWidgetItem(root_item)
-                    sub_item.setText(0, f"  📂  {sub_key}  [{len(mods)}]")
-                    sub_item.setIcon(0, self._make_folder_icon(color))
-                    sub_item.setData(0, Qt.ItemDataRole.UserRole, None)
-                    sub_item.setData(0, Qt.ItemDataRole.UserRole + 1, cat)
-                    sub_item.setForeground(0, QColor(color + "cc"))
-                    sub_item.setFont(0, QFont("DejaVu Sans Mono", 9))
-                    sub_item.setExpanded(False)
-                    parent_item = sub_item
-                else:
-                    parent_item = root_item
-
-                # Leaf nodes (modul)
-                mod_icon  = self._make_module_icon(color)
-                leaf_font = QFont("DejaVu Sans Mono", 9)
-                for module_path, mod_name, meta in sorted(mods, key=lambda x: x[1]):
-                    desc = meta.get("description", "")
-                    rank = meta.get("rank", "Normal")
-                    leaf = QTreeWidgetItem(parent_item)
-                    leaf.setText(0, f"  {mod_name}")
-                    leaf.setIcon(0, mod_icon)
-                    leaf.setData(0, Qt.ItemDataRole.UserRole, module_path)
-                    leaf.setData(0, Qt.ItemDataRole.UserRole + 1, cat)
-                    leaf.setForeground(0, QColor("#d4d4d4"))
-                    leaf.setFont(0, leaf_font)
-                    if desc:
-                        leaf.setToolTip(0, f"[{rank}] {desc}")
+            self.module_list.addItem(item)
 
         self.update_session_info()
 
     def on_category_click(self):
-        """Handle category button click — expand folder yang sesuai."""
+        """Handle category button click"""
         button = self.sender()
         category = button.property('category')
         self.filter_modules_by_category(category)
 
     def filter_modules_by_category(self, category):
-        """Show/hide root folders sesuai kategori dan expand yang dipilih."""
-        root = self.module_tree.invisibleRootItem()
-        for i in range(root.childCount()):
-            cat_item = root.child(i)
-            item_cat = cat_item.data(0, Qt.ItemDataRole.UserRole + 1) or ""
+        """Filter modules by category"""
+        for i in range(self.module_list.count()):
+            item = self.module_list.item(i)
+            module_path = item.data(Qt.ItemDataRole.UserRole)
+
             if category == "all":
-                cat_item.setHidden(False)
-                cat_item.setExpanded(True)
+                item.setHidden(False)
+            elif category == "payloads":
+                item.setHidden("payload" not in module_path.lower())
             else:
-                matches = (item_cat == category) or                           (category == "payloads" and item_cat == "payloads")
-                cat_item.setHidden(not matches)
-                if matches:
-                    cat_item.setExpanded(True)
+                item.setHidden(f"/{category}/" not in module_path)
 
     def search_modules(self):
-        """Cari modul di QTreeWidget secara real-time; expand folder yang ada hasil."""
-        search_text = self.search_input.text().lower().strip()
+        """Search modules as user types"""
+        search_text = self.search_input.text().lower()
 
-        def _traverse(item):
-            module_path = item.data(0, Qt.ItemDataRole.UserRole)
-            if module_path is None:
-                # Folder — cek child-nya
-                any_visible = False
-                for j in range(item.childCount()):
-                    if _traverse(item.child(j)):
-                        any_visible = True
-                item.setHidden(not any_visible)
-                if any_visible and search_text:
-                    item.setExpanded(True)
-                return any_visible
-            else:
-                # Leaf (modul)
-                if not search_text:
-                    item.setHidden(False)
-                    return True
-                meta = self.framework.metadata.get(module_path, {})
-                desc = meta.get("description", "").lower()
-                matches = search_text in module_path.lower() or search_text in desc
-                item.setHidden(not matches)
-                return matches
+        for i in range(self.module_list.count()):
+            item = self.module_list.item(i)
+            module_path = item.data(Qt.ItemDataRole.UserRole)
+            meta = self.framework.metadata.get(module_path, {})
+            description = meta.get("description", "").lower()
 
-        root = self.module_tree.invisibleRootItem()
-        for i in range(root.childCount()):
-            _traverse(root.child(i))
-
-        # Kalau search kosong, kembalikan ke tampilan normal
-        if not search_text:
-            for i in range(root.childCount()):
-                root.child(i).setHidden(False)
-                root.child(i).setExpanded(True)
+            matches = (search_text in module_path.lower() or
+                       search_text in description)
+            item.setHidden(not matches)
 
     def perform_search(self):
         """Perform search command"""
@@ -3485,23 +3297,18 @@ class LazyFrameworkGUI(QMainWindow):
             self.execute_command("search", [search_text])
 
     def load_selected_module(self, item):
-        """Load module yang dipilih dari QTreeWidget (double-click)."""
+        """Load selected module TANPA OUTPUT COMMAND KE CONSOLE"""
         if not item:
             return
-
-        module_path = item.data(0, Qt.ItemDataRole.UserRole)
-        if not module_path:
-            # Klik pada folder → toggle expand/collapse
-            item.setExpanded(not item.isExpanded())
-            return
-
-        import contextlib
+        
+        import contextlib  # Import di sini
         import io
         import os
-
+        
+        module_path = item.data(Qt.ItemDataRole.UserRole)
         module_name = os.path.basename(module_path)
         self.set_active_module(module_name)
-
+        
         import shutil
         module_dir = os.path.dirname(module_path)
         pycache_dir = os.path.join(module_dir, "__pycache__")
@@ -3511,24 +3318,33 @@ class LazyFrameworkGUI(QMainWindow):
                 self.append_output(f"[bold cyan][*] Cache dihapus: {pycache_dir}[/]")
             except Exception as e:
                 self.append_output(f"[bold red][!] Gagal hapus cache: {e}[/]")
-
+        
         try:
+            # Execute use command tanpa output ke console
             output_buffer = io.StringIO()
+            
+            # Gunakan contextlib.redirect_stdout secara langsung
             with contextlib.redirect_stdout(output_buffer), contextlib.redirect_stderr(output_buffer):
                 self.framework.cmd_use([module_path])
-
+            
+            # Update UI state tanpa output ke console
             if self.framework.loaded_module:
                 self.current_module = self.framework.loaded_module.name
                 self.current_module_label.setText(f"Loaded: {self.current_module}")
                 self.current_module_label.setStyleSheet("color: #50fa7b; font-weight: bold;")
                 self.run_btn.setEnabled(True)
                 self.back_btn.setEnabled(True)
+                
+                # Load module options
                 self.load_module_options()
+                
+                # Show module info di tab Module Info (bukan console)
                 self.show_module_info_in_tab()
 
+                # === AGENT MODE: AI otomatis isi options & siap run ===
                 if hasattr(self, 'ai_tab') and self.ai_tab.api_key_input.text().strip():
                     self.ai_tab.run_agent_mode(self.framework.loaded_module)
-
+                
         except Exception as e:
             self.append_output(f"Error loading module: {e}")
 
@@ -4000,78 +3816,6 @@ class LazyFrameworkGUI(QMainWindow):
         else:
             self.execute_command(command, [])
 
-
-    # ── QFileSystemWatcher: auto-scan modules tanpa restart GUI ──────────────────
-
-    def start_module_watcher(self):
-        """Watch folder modules/ dan auto-refresh jika ada file baru/dihapus/berubah."""
-        try:
-            project_root = Path(__file__).resolve().parent.parent
-            module_root = str(project_root / "modules")
-
-            if not Path(module_root).exists():
-                self.append_output(f"[yellow]Modules directory not found: {module_root}[/]")
-                return
-            dirs_to_watch = [module_root]
-            for d in Path(module_root).rglob("*"):
-                if d.is_dir() and "__pycache__" not in d.parts:
-                    dirs_to_watch.append(str(d.resolve()))
-            dirs_to_watch = list(set(dirs_to_watch))
-            self._module_watcher = QFileSystemWatcher(self)
-            self._module_watcher.addPaths(dirs_to_watch)
-
-            self._module_refresh_timer = QTimer(self)
-            self._module_refresh_timer.setSingleShot(True)
-            self._module_refresh_timer.setInterval(1500)
-            self._module_refresh_timer.timeout.connect(self._do_auto_refresh_modules)
-        
-            self._module_watcher.directoryChanged.connect(self._on_module_dir_changed)
-            self._module_watcher.fileChanged.connect(self._on_module_file_changed)
-        
-            self.append_output(f"[cyan]👁️ Module watcher aktif: {len(dirs_to_watch)} folder dipantau[/]")
-            self.append_output(f"[dim]Monitoring: {module_root}[/]")
-  
-        except Exception as e:
-            self.append_output(f"[red]Module watcher error: {e}[/]")
-
-    def _on_module_dir_changed(self, path):
-        """Dipanggil saat ada file baru/dihapus di folder modules."""
-        try:
-            for d in Path(path).iterdir():
-                if d.is_dir() and "__pycache__" not in d.parts:
-                    dp = str(d.resolve())
-                    if dp not in self._module_watcher.directories():
-                        self._module_watcher.addPath(dp)
-        except Exception:
-            pass
-        if not self._module_refresh_timer.isActive():
-            self._module_refresh_timer.start()
-
-    def _on_module_file_changed(self, path):
-        """Dipanggil saat file .py di modules berubah."""
-        if not self._module_refresh_timer.isActive():
-            self._module_refresh_timer.start()
-
-    def _do_auto_refresh_modules(self):
-        """Jalankan refresh modul otomatis (dipanggil setelah debounce 1.5 detik)."""
-        try:
-            self.framework.scan_modules()
-            self.load_all_modules()
-            total = len(self.framework.modules)
-            if hasattr(self, 'show_cyber_toast'):
-                self.show_cyber_toast(
-                    f"🔄 {total} modules terscan otomatis",
-                    title="Module Auto-Refresh",
-                    duration_ms=3000,
-                    level="info"
-                )
-            self.append_output(f"[green]✓ Auto-refresh: {total} modules ditemukan[/]")
-            self.update_session_info()
-        except Exception as e:
-            self.append_output(f"[red]Auto-refresh error: {e}[/]")
-            import traceback
-            self.append_output(f"[red]{traceback.format_exc()}[/]")
-
     def refresh_modules(self):
         """Refresh modules list"""
         self.framework.scan_modules()
@@ -4090,14 +3834,9 @@ class LazyFrameworkGUI(QMainWindow):
             self.console_output.setFont(font)
             self.module_detail_info.setFont(font)
             self.session_info.setFont(font)
-            if hasattr(self, 'module_tree'):
-                def _set_cf(node):
-                    node.setFont(0, font)
-                    for j in range(node.childCount()):
-                        _set_cf(node.child(j))
-                cf_root = self.module_tree.invisibleRootItem()
-                for i in range(cf_root.childCount()):
-                    _set_cf(cf_root.child(i))
+            for i in range(self.module_list.count()):
+                item = self.module_list.item(i)
+                item.setFont(font)
 
             # Terapkan ke input field juga jika mau
             for widget in getattr(self, 'option_widgets', {}).values():
