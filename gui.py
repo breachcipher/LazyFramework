@@ -3319,19 +3319,46 @@ class LazyFrameworkGUI(QMainWindow):
 
     def _make_folder_icon(self, color_hex: str) -> "QIcon":
         """Buat QIcon folder berwarna."""
-        from PyQt6.QtGui import QPixmap, QPainter, QColor
-        px = QPixmap(18, 18)
-        px.fill(QColor(0, 0, 0, 0))
+        from PyQt6.QtGui import QPixmap, QPainter, QColor, QLinearGradient, QPen
+        from PyQt6.QtCore import Qt, QPointF
+        size = 20
+        px = QPixmap(size, size)
+        px.fill(Qt.GlobalColor.transparent)
+    
         painter = QPainter(px)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        # Body folder
-        painter.setBrush(QColor(color_hex + "33"))
-        painter.setPen(QColor(color_hex))
-        painter.drawRoundedRect(1, 4, 16, 12, 2, 2)
-        # Tab atas folder
-        painter.drawRoundedRect(1, 2, 7, 5, 1, 1)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        # Warna utama folder
+        base_color = QColor(color_hex)
+        light_color = base_color.lighter(140)
+        dark_color = base_color.darker(120)
+        gradient = QLinearGradient(QPointF(0, 6), QPointF(0, 18))
+        gradient.setColorAt(0, light_color)
+        gradient.setColorAt(1, dark_color)
+    
+        painter.setBrush(gradient)
+        painter.setPen(QPen(QColor("#2c3e50"), 1.2))  # Border gelap
+        # Draw folder body (sedikit lebih lebar & rounded)
+        painter.drawRoundedRect(2, 7, 16, 12, 2, 2)
+
+        # === TAB FOLDER (yang di atas) ===
+        tab_gradient = QLinearGradient(QPointF(0, 3), QPointF(0, 7))
+        tab_gradient.setColorAt(0, light_color.lighter(160))
+        tab_gradient.setColorAt(1, base_color)
+    
+        painter.setBrush(tab_gradient)
+        painter.setPen(QPen(QColor("#2c3e50"), 1))
+        painter.drawRoundedRect(2, 4, 9, 5, 2, 2)   # Tab lebih pendek & tebal
+
+        # Highlight di dalam tab (biar kelihatan 3D)
+        painter.setPen(QPen(QColor(255, 255, 255, 80), 1))
+        painter.drawLine(4, 5, 9, 5)
+
         painter.end()
         return QIcon(px)
+
+
 
     def _make_module_icon(self, color_hex: str) -> "QIcon":
         """Buat QIcon bullet kecil untuk leaf node."""
