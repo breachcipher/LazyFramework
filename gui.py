@@ -55,10 +55,12 @@ from widgets.notif import CyberpunkToast
 from widgets.theme_manager import ThemeManager
 from widgets.network_map import NetworkMapWidget
 from widgets.proxy_dialog import ProxySettingsDialog
-
+from widgets.module_watcher import ModuleWatcher   # ← TAMBAHKAN INI
 # Import dari folder core/
 from core.capture import UniversalCapture
 from core.module_runner import ModuleRunner
+
+
 # Get absolute project root directory
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -150,7 +152,10 @@ class LazyFrameworkGUI(QMainWindow):
                 pass
                 
         #self.load_banner()
-        QTimer.singleShot(500, self.start_module_watcher)  # Auto-scan watcher
+        self.module_watcher = ModuleWatcher(self.framework, gui_instance=self, parent=self)
+        self.module_watcher.modulesRefreshed.connect(self.load_all_modules)
+        QTimer.singleShot(800, self.module_watcher.start_watching)  # Delay sedikit
+        #QTimer.singleShot(500, self.start_module_watcher)  # Auto-scan watcher
         QTimer.singleShot(2000, self.start_tor_auto_rotate)
         self.last_tor_ip = None
         self.active_module = ""
