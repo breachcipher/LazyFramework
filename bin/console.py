@@ -22,8 +22,7 @@ from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import ANSI  # Tambahkan ini
 from prompt_toolkit.completion import WordCompleter
-BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.append(str(BASE_DIR))
+
 
 from core import Search, get_random_banner, load_banners_from_folder, is_terminal_environment
 os.environ['TERM'] = 'xterm-256color'
@@ -32,8 +31,13 @@ console = Console()
 import builtins
 builtins.console = console
 
-BASE_DIR = Path(__file__).parent.parent 
-MODULE_DIR, BANNER_DIR = BASE_DIR / "modules", BASE_DIR / "banner"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# Define base directories using absolute paths
+BASE_DIR = PROJECT_ROOT
+MODULE_DIR = BASE_DIR / "modules"
+BANNER_DIR = BASE_DIR / "banner"
 METADATA_READ_LINES = 120
 
 # ─── Smart Filter (sama dengan ai_assistant.py) ────────────────────────────────
